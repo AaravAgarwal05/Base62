@@ -26,9 +26,12 @@ export async function DELETE(
 
   try {
     // Delete from Database
-    const result = await db.delete(urls).where(eq(urls.id, databaseId));
+    const deletedUrls = await db
+      .delete(urls)
+      .where(eq(urls.id, databaseId))
+      .returning();
 
-    if (result.rowCount === 0) {
+    if (deletedUrls.length === 0) {
       return NextResponse.json({ error: "URL not found." }, { status: 404 });
     }
 
