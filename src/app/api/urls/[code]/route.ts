@@ -6,7 +6,7 @@ import { redisClient } from "@/lib/cache/redis";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { code: string } }
+  { params }: { params: Promise<{ code: string }> }
 ) {
   const { code } = await params;
 

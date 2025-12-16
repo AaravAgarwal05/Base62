@@ -6,7 +6,7 @@ import { redisClient } from "@/lib/cache/redis";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { code: string } }
+  { params }: { params: Promise<{ code: string }> }
 ) {
   const { code } = await params;
 
@@ -41,9 +41,11 @@ export async function GET(
 
   const longUrl = result.rows[0].long_url;
 
-  redisClient.set(`url:${code}`, longUrl, {
+  redisClient
+    .set(`url:${code}`, longUrl, {
       EX: 60 * 60 * 24,
-  }).catch(err => console.error("Redis set error:", err));
+    })
+    .catch((err) => console.error("Redis set error:", err));
 
   return NextResponse.redirect(longUrl);
 }
