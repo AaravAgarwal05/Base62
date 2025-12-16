@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decodeBase62 } from "@/lib/encoding/base62";
 import { deobfuscate } from "@/lib/encoding/obfuscation";
-import { dbPool } from "@/lib/db/postgres";
+import { db } from "@/lib/db";
+import { urls } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { redisClient } from "@/lib/cache/redis";
 
 export async function DELETE(
@@ -24,9 +26,7 @@ export async function DELETE(
 
   try {
     // Delete from Database
-    const result = await dbPool.query("DELETE FROM urls WHERE id = $1", [
-      databaseId.toString(),
-    ]);
+    const result = await db.delete(urls).where(eq(urls.id, databaseId));
 
     if (result.rowCount === 0) {
       return NextResponse.json({ error: "URL not found." }, { status: 404 });

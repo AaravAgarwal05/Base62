@@ -1,35 +1,28 @@
-import { dbPool } from "../db/postgres";
+import { db } from "@/lib/db";
+import { counters } from "@/lib/db/schema";
+import { eq, sql } from "drizzle-orm";
 
 const END = BigInt(process.env.COUNTER_END!);
 
 export async function getNextID(): Promise<bigint> {
   const serverId = process.env.SERVER_ID || "default-server";
 
-  const client = await dbPool.connect();
-  try {
-    const res = await client.query(
-      `
-      UPDATE counters
-      SET value = value + 1
-      WHERE server_id = $1
-      RETURNING value
-    `,
-      [serverId]
-    );
+  const res = await db
+    .update(counters)
+    .set({ value: sql`${counters.value} + 1` })
+    .where(eq(counters.serverId, serverId))
+    .returning({ value: counters.value });
 
-    if (res.rowCount === 0) {
-      throw new Error("Counter not initialized for this server");
-    }
-
-    const newValue = BigInt(res.rows[0].value);
-    const allocatedId = newValue - 1n;
-
-    if (allocatedId > END) {
-      throw new Error("Counter has exceeded the maximum value");
-    }
-
-    return allocatedId;
-  } finally {
-    client.release();
+  if (res.length === 0) {
+    throw new Error("Counter not initialized for this server");
   }
+
+  const newValue = res[0].value;
+  const allocatedId = newValue - 1n;
+
+  if (allocatedId > END) {
+    throw new Error("Counter has exceeded the maximum value");
+  }
+
+  return allocatedId;
 }

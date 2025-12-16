@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decodeBase62 } from "@/lib/encoding/base62";
 import { deobfuscate } from "@/lib/encoding/obfuscation";
-import { dbPool } from "@/lib/db/postgres";
+import { db } from "@/lib/db";
+import { urls } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { redisClient } from "@/lib/cache/redis";
 
 export async function GET(
@@ -31,15 +33,16 @@ export async function GET(
     );
   }
 
-  const result = await dbPool.query("SELECT long_url FROM urls WHERE id = $1", [
-    databaseId.toString(),
-  ]);
+  const result = await db
+    .select({ longUrl: urls.longUrl })
+    .from(urls)
+    .where(eq(urls.id, databaseId));
 
-  if (result.rowCount === 0) {
+  if (result.length === 0) {
     return NextResponse.json({ error: "URL not found." }, { status: 404 });
   }
 
-  const longUrl = result.rows[0].long_url;
+  const longUrl = result[0].longUrl;
 
   redisClient
     .set(`url:${code}`, longUrl, {

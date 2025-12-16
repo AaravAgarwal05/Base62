@@ -4,7 +4,8 @@ import { getNextID } from "@/lib/counter/counter";
 import { obfuscate } from "@/lib/encoding/obfuscation";
 import { encodeBase62 } from "@/lib/encoding/base62";
 import { validateURL } from "@/lib/utils/validateURL";
-import { dbPool } from "@/lib/db/postgres";
+import { db } from "@/lib/db";
+import { urls } from "@/lib/db/schema";
 
 export async function POST(request: NextRequest) {
   await initApp();
@@ -26,10 +27,11 @@ export async function POST(request: NextRequest) {
   const id = await getNextID();
   const obfuscatedID = obfuscate(id);
   const code = encodeBase62(obfuscatedID);
-  await dbPool.query("INSERT INTO urls (id, long_url) VALUES ($1, $2)", [
-    id.toString(),
-    longURL,
-  ]);
+
+  await db.insert(urls).values({
+    id: id,
+    longUrl: longURL,
+  });
 
   const shortUrl = `${process.env.NEXT_PUBLIC_URL}/r/${code}`;
 
