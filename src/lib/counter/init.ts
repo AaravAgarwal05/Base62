@@ -1,20 +1,27 @@
-import { sqlite } from "./sqlite";
+import { dbPool } from "../db/postgres";
 
-export function initCounterTable() {
-  sqlite
-    .prepare(
-      "CREATE TABLE IF NOT EXISTS counter (id INTEGER PRIMARY KEY CHECK (id = 1), value INTEGER NOT NULL)"
-    )
-    .run();
+export async function initCounterTable() {
+  const client = await dbPool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS counters (
+        server_id INT PRIMARY KEY,
+        value BIGINT NOT NULL
+      );
+    `);
 
-  const row = sqlite.prepare("SELECT value FROM counter WHERE id = 1").get();
+    const serverId = Number(process.env.SERVER_ID);
+    const start = BigInt(process.env.COUNTER_START!);
 
-  if (!row) {
-    const start = Number(process.env.COUNTER_START);
-    if (Number.isNaN(start)) {
-      throw new Error("Invalid COUNTER_START");
-    }
-
-    sqlite.prepare("INSERT INTO counter (id, value) VALUES (1, ?)").run(start);
+    await client.query(
+      `
+      INSERT INTO counters (server_id, value)
+      VALUES ($1, $2)
+      ON CONFLICT (server_id) DO NOTHING;
+    `,
+      [serverId, start.toString()]
+    );
+  } finally {
+    client.release();
   }
 }

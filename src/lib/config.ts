@@ -2,8 +2,8 @@ import { initCounterTable } from "./counter/init";
 
 let initialized = false;
 
-export function initApp() {
+export async function initApp() {
   if (initialized) return;
-  initCounterTable();
+  await initCounterTable();
   initialized = true;
 }

@@ -1,30 +1,35 @@
-import { sqlite } from "./sqlite";
+import { dbPool } from "../db/postgres";
 
 const END = BigInt(process.env.COUNTER_END!);
 
-const selectStmt = sqlite.prepare("SELECT value FROM counter WHERE id = 1");
-const updateStmt = sqlite.prepare("UPDATE counter SET value = ? WHERE id = 1");
+export async function getNextID(): Promise<bigint> {
+  const serverId = process.env.SERVER_ID || "default-server";
 
-export function getNextID(): bigint {
-  const tx = sqlite.transaction(() => {
-    const row = selectStmt.get() as { value: number };
+  const client = await dbPool.connect();
+  try {
+    const res = await client.query(
+      `
+      UPDATE counters
+      SET value = value + 1
+      WHERE server_id = $1
+      RETURNING value
+    `,
+      [serverId]
+    );
 
-    if (!row) {
-      throw new Error("Counter not initialized");
+    if (res.rowCount === 0) {
+      throw new Error("Counter not initialized for this server");
     }
 
-    const current = BigInt(row.value);
+    const newValue = BigInt(res.rows[0].value);
+    const allocatedId = newValue - 1n;
 
-    if (current > END) {
+    if (allocatedId > END) {
       throw new Error("Counter has exceeded the maximum value");
     }
 
-    const next = current + 1n;
-
-    updateStmt.run(Number(next));
-
-    return current;
-  });
-
-  return tx();
+    return allocatedId;
+  } finally {
+    client.release();
+  }
 }
