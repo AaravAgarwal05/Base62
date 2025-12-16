@@ -1,5 +1,5 @@
-import { db } from "@/lib/db";
-import { counters } from "@/lib/db/schema";
+import { db } from "../db";
+import { counters } from "../db/schema";
 
 export async function initCounterTable() {
   const serverId = process.env.SERVER_ID || "default-server";

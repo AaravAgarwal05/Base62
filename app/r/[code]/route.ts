@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decodeBase62 } from "@/lib/encoding/base62";
-import { deobfuscate } from "@/lib/encoding/obfuscation";
-import { db } from "@/lib/db";
-import { urls } from "@/lib/db/schema";
+import { decodeBase62 } from "../../../lib/encoding/base62";
+import { deobfuscate } from "../../../lib/encoding/obfuscation";
+import { db } from "../../../lib/db";
+import { urls } from "../../../lib/db/schema";
 import { eq } from "drizzle-orm";
-import { redisClient } from "@/lib/cache/redis";
+import { redisClient } from "../../../lib/cache/redis";
 
 export async function GET(
   request: NextRequest,

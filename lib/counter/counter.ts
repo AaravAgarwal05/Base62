@@ -1,5 +1,5 @@
-import { db } from "@/lib/db";
-import { counters } from "@/lib/db/schema";
+import { db } from "../db";
+import { counters } from "../db/schema";
 import { eq, sql } from "drizzle-orm";
 
 const END = BigInt(process.env.COUNTER_END!);

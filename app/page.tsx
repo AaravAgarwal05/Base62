@@ -12,7 +12,7 @@ import {
   Sparkles,
   Github,
 } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "../components/theme-toggle";
 
 interface UrlData {
   code: string;

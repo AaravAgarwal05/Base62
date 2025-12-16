@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initApp } from "@/lib/config";
-import { getNextID } from "@/lib/counter/counter";
-import { obfuscate } from "@/lib/encoding/obfuscation";
-import { encodeBase62 } from "@/lib/encoding/base62";
-import { validateURL } from "@/lib/utils/validateURL";
-import { db } from "@/lib/db";
-import { urls } from "@/lib/db/schema";
+import { initApp } from "../../../lib/config";
+import { getNextID } from "../../../lib/counter/counter";
+import { obfuscate } from "../../../lib/encoding/obfuscation";
+import { encodeBase62 } from "../../../lib/encoding/base62";
+import { validateURL } from "../../../lib/utils/validateURL";
+import { db } from "../../../lib/db";
+import { urls } from "../../../lib/db/schema";
 
 export async function POST(request: NextRequest) {
   await initApp();
