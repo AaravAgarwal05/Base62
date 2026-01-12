@@ -59,7 +59,7 @@ export function QRCodeModal({ isOpen, onClose, url }: QRCodeModalProps) {
   useEffect(() => {
     if (qrCode && isOpen && ref.current) {
       qrCode.update({
-        data: url,
+        data: `${url}?source=qr`,
       });
       ref.current.innerHTML = "";
       qrCode.append(ref.current);

@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, BarChart2, MousePointer2, QrCode } from "lucide-react";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { format, subDays } from "date-fns";
 import dynamic from "next/dynamic";
 import { ApexOptions } from "apexcharts";
 
@@ -26,7 +25,7 @@ export function AnalyticsModal({ isOpen, onClose, code }: AnalyticsModalProps) {
   const [data, setData] = useState<any>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
   const [chartType, setChartType] = useState<ChartType>("bar");
-  
+
   const [chartSeries, setChartSeries] = useState<any[]>([]);
   const [chartOptions, setChartOptions] = useState<ApexOptions>({});
 
@@ -57,20 +56,22 @@ export function AnalyticsModal({ isOpen, onClose, code }: AnalyticsModalProps) {
 
   const processChartData = (history: any[], days: number) => {
     console.log("[Analytics] Processing history:", history.length, "items");
-    
+
     // Helper to get consistent UTC date key
     const getDateKey = (date: Date) => {
-        // Use UTC to avoid timezone issues
-        const year = date.getUTCFullYear();
-        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(date.getUTCDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+      // Use UTC to avoid timezone issues
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(date.getUTCDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     };
-    
+
     // Get today in UTC
     const getUTCToday = () => {
-        const now = new Date();
-        return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      const now = new Date();
+      return new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+      );
     };
 
     // Create buckets for the last N days (in UTC)
@@ -80,63 +81,87 @@ export function AnalyticsModal({ isOpen, onClose, code }: AnalyticsModalProps) {
     const scansData: number[] = [];
 
     const utcToday = getUTCToday();
-    
+
     const lastNDays = Array.from({ length: days }, (_, i) => {
       // Iterate backwards: Today, Yesterday, ...
       const d = new Date(utcToday);
       d.setUTCDate(d.getUTCDate() - (days - 1 - i));
       const key = getDateKey(d);
-      
+
       // Format label
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const label = days > 30 
-        ? `${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCDate()).padStart(2, '0')}`
-        : `${monthNames[d.getUTCMonth()]} ${String(d.getUTCDate()).padStart(2, '0')}`;
-      
+      const monthNames = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      const label =
+        days > 30
+          ? `${String(d.getUTCMonth() + 1).padStart(2, "0")}/${String(
+              d.getUTCDate()
+            ).padStart(2, "0")}`
+          : `${monthNames[d.getUTCMonth()]} ${String(d.getUTCDate()).padStart(
+              2,
+              "0"
+            )}`;
+
       const item = {
         date: d,
         label: label,
         clicks: 0,
         scans: 0,
-        key: key
+        key: key,
       };
-      
+
       statsMap.set(key, item);
       return item;
     });
 
-    console.log("[Analytics] Date buckets created:", Array.from(statsMap.keys()));
+    console.log(
+      "[Analytics] Date buckets created:",
+      Array.from(statsMap.keys())
+    );
 
     if (Array.isArray(history)) {
-        history.forEach((event: any) => {
+      history.forEach((event: any) => {
         try {
-            const eventDate = new Date(event.timestamp);
-            const key = getDateKey(eventDate);
-            
-            console.log(`[Analytics] Event: ${event.timestamp} -> UTC Key: ${key}, Type: ${event.type}`);
-            
-            const dayStat = statsMap.get(key);
-            
-            if (dayStat) {
+          const eventDate = new Date(event.timestamp);
+          const key = getDateKey(eventDate);
+
+          console.log(
+            `[Analytics] Event: ${event.timestamp} -> UTC Key: ${key}, Type: ${event.type}`
+          );
+
+          const dayStat = statsMap.get(key);
+
+          if (dayStat) {
             if (event.type === "scan") {
-                dayStat.scans += 1;
+              dayStat.scans += 1;
             } else {
-                dayStat.clicks += 1;
+              dayStat.clicks += 1;
             }
-            } else {
-                 console.warn("[Analytics] Event date not in range:", key);
-            }
+          } else {
+            console.warn("[Analytics] Event date not in range:", key);
+          }
         } catch (e) {
-            console.error("Date processing error", e);
+          console.error("Date processing error", e);
         }
-        });
+      });
     }
 
     // Convert map to arrays for ApexCharts
-    lastNDays.forEach(day => {
-        categories.push(day.label);
-        clicksData.push(day.clicks);
-        scansData.push(day.scans);
+    lastNDays.forEach((day) => {
+      categories.push(day.label);
+      clicksData.push(day.clicks);
+      scansData.push(day.scans);
     });
 
     console.log("[Analytics] Chart Categories:", categories);
@@ -166,11 +191,11 @@ export function AnalyticsModal({ isOpen, onClose, code }: AnalyticsModalProps) {
         zoom: {
           enabled: false,
         },
-        background: 'transparent',
-        type: chartType // Explicitly set type here too
+        background: "transparent",
+        type: chartType, // Explicitly set type here too
       },
       theme: {
-          mode: 'light', 
+        mode: "light",
       },
       colors: ["#ea580c", "#059669"], // orange-600, emerald-600
       dataLabels: {
@@ -182,12 +207,12 @@ export function AnalyticsModal({ isOpen, onClose, code }: AnalyticsModalProps) {
       },
       fill: {
         type: chartType === "bar" ? "solid" : "gradient",
-         gradient: {
-            shadeIntensity: 1,
-            opacityFrom: 0.7,
-            opacityTo: 0.2,
-            stops: [0, 90, 100]
-        }
+        gradient: {
+          shadeIntensity: 1,
+          opacityFrom: 0.7,
+          opacityTo: 0.2,
+          stops: [0, 90, 100],
+        },
       },
       grid: {
         borderColor: "#f3f4f6", // gray-100 (update for dark mode in component logic if needed)
@@ -218,8 +243,8 @@ export function AnalyticsModal({ isOpen, onClose, code }: AnalyticsModalProps) {
           },
         },
         tooltip: {
-            enabled: false
-        }
+          enabled: false,
+        },
       },
       yaxis: {
         labels: {
@@ -231,19 +256,19 @@ export function AnalyticsModal({ isOpen, onClose, code }: AnalyticsModalProps) {
         },
       },
       legend: {
-        position: 'top',
-        horizontalAlign: 'right',
+        position: "top",
+        horizontalAlign: "right",
         offsetY: -20,
         itemMargin: {
-            horizontal: 10,
-            vertical: 0
+          horizontal: 10,
+          vertical: 0,
         },
       },
       tooltip: {
         theme: "dark",
         style: {
-          fontSize: '12px',
-          fontFamily: 'inherit'
+          fontSize: "12px",
+          fontFamily: "inherit",
         },
         y: {
           formatter: function (val) {
@@ -253,10 +278,10 @@ export function AnalyticsModal({ isOpen, onClose, code }: AnalyticsModalProps) {
       },
       plotOptions: {
         bar: {
-            borderRadius: 4,
-            columnWidth: days > 30 ? '70%' : '50%',
-        }
-      }
+          borderRadius: 4,
+          columnWidth: days > 30 ? "70%" : "50%",
+        },
+      },
     });
   };
 
@@ -293,7 +318,7 @@ export function AnalyticsModal({ isOpen, onClose, code }: AnalyticsModalProps) {
             </div>
 
             {loading ? (
-              <div className="flex-1 flex items-center justify-center min-h-[300px]">
+              <div className="flex-1 flex items-center justify-center min-h-75">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
               </div>
             ) : (
@@ -336,7 +361,7 @@ export function AnalyticsModal({ isOpen, onClose, code }: AnalyticsModalProps) {
                       Performance
                     </h4>
                     <div className="flex flex-wrap items-center gap-2">
-                       {/* Time Range Toggle */}
+                      {/* Time Range Toggle */}
                       <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
                         {([7, 30, 90] as TimeRange[]).map((range) => (
                           <button
@@ -354,9 +379,9 @@ export function AnalyticsModal({ isOpen, onClose, code }: AnalyticsModalProps) {
                       </div>
                       <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1 hidden sm:block"></div>
                       {/* Chart Type Toggle */}
-                       <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                      <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
                         {(["bar", "line"] as ChartType[]).map((type) => (
-                           <button
+                          <button
                             key={type}
                             onClick={() => setChartType(type)}
                             className={`px-3 py-1 text-xs font-medium rounded-md transition-all capitalize ${
@@ -371,30 +396,40 @@ export function AnalyticsModal({ isOpen, onClose, code }: AnalyticsModalProps) {
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="h-[300px] w-full">
-                     {/* ApexChart Component */}
-                     {(() => {
-                        console.log("[Analytics Render] chartSeries:", chartSeries);
-                        console.log("[Analytics Render] chartOptions:", chartOptions);
-                        console.log("[Analytics Render] chartType:", chartType);
-                        console.log("[Analytics Render] Has categories:", chartOptions?.xaxis?.categories);
-                        return null;
-                     })()}
-                     {chartSeries.length > 0 && chartOptions?.xaxis?.categories ? (
-                        <Chart 
-                            key={`${chartType}-${timeRange}`}
-                            options={chartOptions} 
-                            series={chartSeries} 
-                            type={chartType} 
-                            height={300}
-                            width="100%"
-                        />
-                     ) : (
-                        <div className="flex items-center justify-center h-full text-gray-400">
-                          No chart data available
-                        </div>
-                     )}
+
+                  <div className="h-75 w-full">
+                    {/* ApexChart Component */}
+                    {(() => {
+                      console.log(
+                        "[Analytics Render] chartSeries:",
+                        chartSeries
+                      );
+                      console.log(
+                        "[Analytics Render] chartOptions:",
+                        chartOptions
+                      );
+                      console.log("[Analytics Render] chartType:", chartType);
+                      console.log(
+                        "[Analytics Render] Has categories:",
+                        chartOptions?.xaxis?.categories
+                      );
+                      return null;
+                    })()}
+                    {chartSeries.length > 0 &&
+                    chartOptions?.xaxis?.categories ? (
+                      <Chart
+                        key={`${chartType}-${timeRange}`}
+                        options={chartOptions}
+                        series={chartSeries}
+                        type={chartType}
+                        height={300}
+                        width="100%"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400">
+                        No chart data available
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
