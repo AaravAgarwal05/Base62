@@ -11,8 +11,12 @@ import {
   ArrowRight,
   Sparkles,
   Github,
+  QrCode,
+  BarChart2,
 } from "lucide-react";
 import { ThemeToggle } from "../components/theme-toggle";
+import { QRCodeModal } from "../components/qr-code-modal";
+import { AnalyticsModal } from "../components/analytics-modal";
 
 interface UrlData {
   code: string;
@@ -26,6 +30,10 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [urls, setUrls] = useState<UrlData[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [activeQrUrl, setActiveQrUrl] = useState<string | null>(null);
+  const [activeAnalyticsCode, setActiveAnalyticsCode] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -111,7 +119,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4">
             <a
-              href="https://github.com"
+              href="https://github.com/AaravAgarwal05"
               target="_blank"
               rel="noreferrer noopener"
               aria-label="GitHub"
@@ -245,6 +253,20 @@ export default function Home() {
 
                       <div className="flex items-center gap-2 shrink-0">
                         <button
+                          onClick={() => setActiveAnalyticsCode(url.code)}
+                          className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                          title="View Analytics"
+                        >
+                          <BarChart2 size={18} />
+                        </button>
+                        <button
+                          onClick={() => setActiveQrUrl(url.shortUrl)}
+                          className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
+                          title="Show QR Code"
+                        >
+                          <QrCode size={18} />
+                        </button>
+                        <button
                           onClick={() => copyToClipboard(url.shortUrl)}
                           className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
                           title="Copy to clipboard"
@@ -267,6 +289,18 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      <QRCodeModal
+        isOpen={!!activeQrUrl}
+        onClose={() => setActiveQrUrl(null)}
+        url={activeQrUrl || ""}
+      />
+
+      <AnalyticsModal
+        isOpen={!!activeAnalyticsCode}
+        onClose={() => setActiveAnalyticsCode(null)}
+        code={activeAnalyticsCode || ""}
+      />
     </div>
   );
 }
