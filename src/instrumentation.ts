@@ -11,6 +11,6 @@ export async function register() {
     console.log("✅ App initialized");
   } catch (e) {
     console.error("❌ Startup failed:", e);
-    process.exit(1);
+    throw e;
   }
 }
