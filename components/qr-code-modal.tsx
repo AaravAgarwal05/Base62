@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Download, Copy, Check } from "lucide-react";
+import { X, Download, Copy, Check, QrCode, ExternalLink } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import QRCodeStyling from "qr-code-styling";
 
@@ -11,45 +11,49 @@ interface QRCodeModalProps {
   url: string;
 }
 
+const springEase = [0.34, 1.1, 0.55, 1] as const;
+
 export function QRCodeModal({ isOpen, onClose, url }: QRCodeModalProps) {
   const [copied, setCopied] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const [qrCode, setQrCode] = useState<QRCodeStyling | null>(null);
 
   useEffect(() => {
     const qr = new QRCodeStyling({
-      width: 300,
-      height: 300,
+      width: 280,
+      height: 280,
       type: "svg",
       data: `${url}?source=qr`,
       image: "/a&a-logo.png",
       dotsOptions: {
-        color: "#ea580c",
+        color: "#d4af37",
         type: "extra-rounded",
         gradient: {
           type: "linear",
           rotation: 45,
           colorStops: [
-            { offset: 0, color: "#ea580c" }, // orange-600
-            { offset: 1, color: "#059669" }, // emerald-600
+            { offset: 0, color: "#f2ca50" },
+            { offset: 1, color: "#d4af37" },
           ],
         },
       },
-      backgroundOptions: {
-        color: "#ffffff",
-      },
+      backgroundOptions: { color: "#1c1b1b" },
       imageOptions: {
         crossOrigin: "anonymous",
-        margin: 10,
-        imageSize: 0.4,
+        margin: 8,
+        imageSize: 0.35,
       },
       cornersSquareOptions: {
         type: "extra-rounded",
-        color: "#ea580c",
+        color: "#f2ca50",
       },
       cornersDotOptions: {
         type: "dot",
-        color: "#059669",
+        color: "#d4af37",
+      },
+      qrOptions: {
+        errorCorrectionLevel: "M",
       },
     });
 
@@ -58,9 +62,7 @@ export function QRCodeModal({ isOpen, onClose, url }: QRCodeModalProps) {
 
   useEffect(() => {
     if (qrCode && isOpen && ref.current) {
-      qrCode.update({
-        data: `${url}?source=qr`,
-      });
+      qrCode.update({ data: `${url}?source=qr` });
       ref.current.innerHTML = "";
       qrCode.append(ref.current);
     }
@@ -78,69 +80,137 @@ export function QRCodeModal({ isOpen, onClose, url }: QRCodeModalProps) {
 
   const handleDownload = () => {
     if (qrCode) {
-      qrCode.download({
-        name: "qrcode",
-        extension: "png",
-      });
+      qrCode.download({ name: "qrcode", extension: "png" });
+      setDownloaded(true);
+      setTimeout(() => setDownloaded(false), 2000);
     }
   };
+
+  // Short display URL
+  const displayUrl = url.replace(/^https?:\/\//, "");
 
   return (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/50 backdrop-blur-xs"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           />
 
+          {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.92, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 w-full max-w-sm border border-gray-100 dark:border-gray-800"
+            exit={{ opacity: 0, scale: 0.92, y: 30 }}
+            transition={{ duration: 0.4, ease: springEase }}
+            className="relative bg-surface border border-outline-variant/20 rounded-xl p-6 sm:p-8 w-full max-w-sm shadow-2xl overflow-hidden"
           >
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-orange-600 to-emerald-600 dark:from-orange-400 dark:to-emerald-400">
-                QR Code
-              </h3>
+            {/* Subtle gold glow at top */}
+            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-48 h-48 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
+
+            {/* ── Header ── */}
+            <div className="flex justify-between items-center mb-6 relative">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <QrCode size={18} className="text-primary" />
+                </div>
+                <h3 className="font-headline-lg text-headline-lg-mobile text-on-surface">
+                  QR Code
+                </h3>
+              </div>
               <button
                 onClick={onClose}
-                className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-outline-variant hover:text-on-surface hover:bg-surface-container transition-colors"
                 title="Close"
               >
-                <X size={20} />
+                <X size={17} />
               </button>
             </div>
 
-            <div className="flex flex-col items-center gap-6">
-              <div className="p-4 bg-white rounded-xl shadow-md border border-gray-100">
+            {/* ── QR Code ── */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.1, ease: springEase }}
+              className="flex flex-col items-center gap-5"
+            >
+              {/* QR Frame */}
+              <div className="relative p-5 bg-surface-container-low rounded-xl border border-outline-variant/15">
+                {/* Inner glow ring */}
+                <div className="absolute inset-0 rounded-xl ring-1 ring-primary/10 pointer-events-none" />
                 <div
                   ref={ref}
                   className="overflow-hidden rounded-lg mx-auto flex justify-center"
                 />
               </div>
 
-              <div className="w-full flex gap-3">
+              {/* ── URL Display ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+                className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-surface-container/70 rounded-lg border border-outline-variant/15 group"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <ExternalLink size={13} className="text-primary shrink-0" />
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-code-md text-code-md text-primary hover:underline truncate"
+                  >
+                    {displayUrl}
+                  </a>
+                </div>
                 <button
                   onClick={handleCopy}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-sm"
+                  className={`shrink-0 p-1.5 rounded transition-all duration-200 ${
+                    copied
+                      ? "text-primary bg-primary/10"
+                      : "text-outline-variant opacity-0 group-hover:opacity-100 hover:text-primary hover:bg-primary/10"
+                  }`}
+                  title="Copy link"
                 >
-                  {copied ? <Check size={16} /> : <Copy size={16} />}
-                  {copied ? "Copied" : "Copy URL"}
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+              </motion.div>
+
+              {/* ── Actions ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+                className="w-full flex gap-3"
+              >
+                <button
+                  onClick={handleCopy}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all duration-200 font-label-caps text-label-caps uppercase tracking-wider text-sm ${
+                    copied
+                      ? "bg-primary/10 border-primary/30 text-primary"
+                      : "border-outline-variant/25 text-on-surface-variant hover:border-outline-variant/50 hover:bg-surface-container active:scale-[0.98]"
+                  }`}
+                >
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                  {copied ? "Copied" : "Copy"}
                 </button>
                 <button
                   onClick={handleDownload}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90 transition-opacity font-medium text-sm"
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all duration-200 font-label-caps text-label-caps uppercase tracking-wider text-sm ${
+                    downloaded
+                      ? "bg-primary/10 border border-primary/30 text-primary"
+                      : "bg-primary text-on-primary hover:brightness-110 active:scale-[0.98]"
+                  }`}
                 >
-                  <Download size={16} />
-                  Download
+                  <Download size={14} />
+                  {downloaded ? "Done" : "Download PNG"}
                 </button>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </motion.div>
         </div>
       )}

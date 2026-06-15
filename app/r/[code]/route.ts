@@ -2,36 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { decodeBase62 } from "../../../lib/encoding/base62";
 import { deobfuscate } from "../../../lib/encoding/obfuscation";
 import { db } from "../../../lib/db";
-import { urls, analytics } from "../../../lib/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { urls } from "../../../lib/db/schema";
+import { eq } from "drizzle-orm";
 import { redisClient } from "../../../lib/cache/redis";
-
-async function trackAnalytics(databaseId: bigint, type: "click" | "scan") {
-  try {
-    console.log(`[Tracking] Start tracking for id=${databaseId}, type=${type}`);
-    // 1. Increment generic counter
-    if (type === "click") {
-      await db
-        .update(urls)
-        .set({ totalClicks: sql`${urls.totalClicks} + 1` })
-        .where(eq(urls.id, databaseId));
-    } else {
-      await db
-        .update(urls)
-        .set({ totalScans: sql`${urls.totalScans} + 1` })
-        .where(eq(urls.id, databaseId));
-    }
-
-    // 2. Add time-series entry
-    await db.insert(analytics).values({
-      urlId: databaseId,
-      type: type,
-    });
-    console.log(`[Tracking] Success for id=${databaseId}`);
-  } catch (e) {
-    console.error("[Tracking] Analytics error:", e);
-  }
-}
+import { publishAnalyticsEvent } from "../../../lib/queue/analytics-publisher";
 
 export async function GET(
   request: NextRequest,
@@ -58,7 +32,7 @@ export async function GET(
   // In Vercel serverless, we should ideally use context.waitUntil, but that's for edge.
   // For Node runtime, unawaited promises *might* complete, but awaiting ensures it.
   // To keep it fast, we could assume Redis is the primary path and await analytics there.
-  const trackPromise = trackAnalytics(databaseId, type);
+  const trackPromise = publishAnalyticsEvent(databaseId, type);
 
   try {
     const cached = await redisClient.get(`url:${code}`);

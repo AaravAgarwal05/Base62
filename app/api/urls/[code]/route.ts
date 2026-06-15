@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { decodeBase62 } from "../../../../lib/encoding/base62";
 import { deobfuscate } from "../../../../lib/encoding/obfuscation";
 import { db } from "../../../../lib/db";
-import { urls } from "../../../../lib/db/schema";
+import { urls, analytics } from "../../../../lib/db/schema";
 import { eq } from "drizzle-orm";
 import { redisClient } from "../../../../lib/cache/redis";
 
@@ -25,6 +25,11 @@ export async function DELETE(
   }
 
   try {
+    // Delete analytics first (FK constraint)
+    await db
+      .delete(analytics)
+      .where(eq(analytics.urlId, databaseId));
+
     // Delete from Database
     const deletedUrls = await db
       .delete(urls)
