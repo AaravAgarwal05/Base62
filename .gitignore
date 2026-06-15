@@ -29,6 +29,7 @@
 
 # ─── Environment ───
 # Sensitive secrets — never commit
+*.env
 .env
 .env.local
 .env.development.local
@@ -87,6 +88,7 @@ next-env.d.ts
 .claude/transcripts/
 .claude/worktrees/
 .agents/
+skills-lock.json
 
 # ─── Optional: package manager lockfiles (pick one) ───
 # pnpm-lock.yaml
@@ -95,3 +97,5 @@ next-env.d.ts
 # ─── Misc ───
 *.log
 .env*.local
+
+ROADMAP.md
