@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { slugSchema } from "@/lib/validation/slug";
 
 export const createUrlSchema = z.object({
   longUrl: z
@@ -16,6 +17,7 @@ export const createUrlSchema = z.object({
       },
       { message: "Must be a valid http or https URL" },
     ),
+  slug: slugSchema.optional(),
 });
 
 export type CreateUrlInput = z.infer<typeof createUrlSchema>;

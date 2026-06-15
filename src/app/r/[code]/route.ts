@@ -10,39 +10,69 @@ import { publishAnalyticsEvent } from "@/lib/queue/analytics-publisher";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
+  { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params;
   const searchParams = request.nextUrl.searchParams;
   const source = searchParams.get("source");
   const type = source === "qr" ? "scan" : "click";
 
-  // Decode ID first to use for analytics (fast, no DB)
+  // Try slug lookup first (with cache)
+  try {
+    const slugCacheKey = `slug:${code}`;
+    const slugCached = await redisClient.get(slugCacheKey);
+    if (slugCached) {
+      publishAnalyticsEvent(BigInt(slugCached.split("|")[0]), type).catch(
+        () => {},
+      );
+      return NextResponse.redirect(slugCached.split("|")[1]);
+    }
+  } catch {
+    // cache miss — continue
+  }
+
+  const slugResult = await db
+    .select({ id: urls.id, longUrl: urls.longUrl })
+    .from(urls)
+    .where(eq(urls.slug, code))
+    .limit(1);
+
+  if (slugResult.length > 0) {
+    const { id, longUrl } = slugResult[0];
+
+    // Warm slug cache
+    redisClient
+      .set(`slug:${code}`, `${id}|${longUrl}`, { EX: 60 * 60 * 24 })
+      .catch(() => {});
+
+    // Fire-and-forget analytics
+    publishAnalyticsEvent(id, type).catch(() => {});
+
+    return NextResponse.redirect(longUrl);
+  }
+
+  // Fallback to ID-based lookup (legacy codes)
   let databaseId: bigint;
   try {
     const obfuscatedId = decodeBase62(code);
     databaseId = deobfuscate(obfuscatedId);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Invalid code format." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  // Fire and forget analytics (or await if reliability is critical)
-  // In Vercel serverless, we should ideally use context.waitUntil, but that's for edge.
-  // For Node runtime, unawaited promises *might* complete, but awaiting ensures it.
-  // To keep it fast, we could assume Redis is the primary path and await analytics there.
   const trackPromise = publishAnalyticsEvent(databaseId, type);
 
   try {
     const cached = await redisClient.get(CACHE_KEYS.url(code));
     if (cached) {
-      await trackPromise; // Ensure tracking completes
+      await trackPromise;
       return NextResponse.redirect(cached);
     }
-  } catch (err) {
-    console.error("Redis cache error:", err);
+  } catch {
+    // cache miss
   }
 
   const result = await db
@@ -57,14 +87,9 @@ export async function GET(
   const longUrl = result[0].longUrl;
 
   redisClient
-    .set(CACHE_KEYS.url(code), longUrl, {
-      EX: 60 * 60 * 24,
-    })
-    .catch((err) => console.error("Redis set error:", err));
+    .set(CACHE_KEYS.url(code), longUrl, { EX: 60 * 60 * 24 })
+    .catch(() => {});
 
-  // If we didn't hit cache, we still need to wait for tracking
-  // (actually we started it earlier)
   await trackPromise;
-
   return NextResponse.redirect(longUrl);
 }
