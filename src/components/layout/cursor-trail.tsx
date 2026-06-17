@@ -76,18 +76,25 @@ export function CursorTrail() {
 
     /* ─── Update rect ─── */
     function updateRect() {
-      const rect = wrapper.getBoundingClientRect();
+      const el = wrapperRef.current;
+      const cvs = canvasRef.current;
+      if (!el || !cvs) return;
+      const c = cvs.getContext("2d");
+      if (!c) return;
+      const rect = el.getBoundingClientRect();
       width = rect.width;
       height = rect.height;
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cvs.width = width * dpr;
+      cvs.height = height * dpr;
+      c.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     /* ─── Pointer handler ─── */
     function handlePointerMove(e: PointerEvent) {
-      const rect = wrapper.getBoundingClientRect();
+      const el = wrapperRef.current;
+      if (!el) { isActive = false; return; }
+      const rect = el.getBoundingClientRect();
       const inside =
         e.clientX >= rect.left && e.clientX <= rect.right &&
         e.clientY >= rect.top && e.clientY <= rect.bottom;
@@ -221,6 +228,7 @@ export function CursorTrail() {
 
     /* ─── Draw ─── */
     function draw() {
+      if (!ctx) return;
       ctx.clearRect(0, 0, width, height);
 
       for (let i = 0; i < TRAIL_LENGTH - 1; i++) {
