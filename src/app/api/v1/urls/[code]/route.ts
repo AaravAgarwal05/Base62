@@ -9,29 +9,39 @@ import { CACHE_KEYS } from "@/lib/cache/keys";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
+  { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params;
 
+  // Try slug lookup first
+  const slugMatch = await db
+    .select({ id: urls.id })
+    .from(urls)
+    .where(eq(urls.slug, code))
+    .limit(1);
+
   let databaseId: bigint;
 
-  try {
-    const obfuscatedId = decodeBase62(code);
-    databaseId = deobfuscate(obfuscatedId);
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Invalid code format." },
-      { status: 400 }
-    );
+  if (slugMatch.length > 0) {
+    databaseId = slugMatch[0].id;
+  } else {
+    // Fallback to legacy ID-based decode
+    try {
+      const obfuscatedId = decodeBase62(code);
+      databaseId = deobfuscate(obfuscatedId);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid code format." },
+        { status: 400 },
+      );
+    }
   }
 
   try {
     // Delete analytics first (FK constraint)
-    await db
-      .delete(analytics)
-      .where(eq(analytics.urlId, databaseId));
+    await db.delete(analytics).where(eq(analytics.urlId, databaseId));
 
-    // Delete from Database
+    // Delete URL
     const deletedUrls = await db
       .delete(urls)
       .where(eq(urls.id, databaseId))
@@ -41,18 +51,19 @@ export async function DELETE(
       return NextResponse.json({ error: "URL not found." }, { status: 404 });
     }
 
-    // Delete from Redis Cache
+    // Delete from Redis cache (both key formats)
     await redisClient.del(CACHE_KEYS.url(code));
+    await redisClient.del(`slug:${code}`);
 
     return NextResponse.json(
       { message: "URL deleted successfully" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Delete error:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

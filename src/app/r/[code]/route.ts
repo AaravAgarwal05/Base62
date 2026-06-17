@@ -17,12 +17,29 @@ export async function GET(
   const source = searchParams.get("source");
   const type = source === "qr" ? "scan" : "click";
 
+  /* ─── Extract request context for analytics ─── */
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    null;
+  const userAgent = request.headers.get("user-agent") ?? null;
+  const referrer = request.headers.get("referer") ?? null;
+  const geo = (request as any).geo ?? {};
+  const analyticsCtx = {
+    ip,
+    userAgent,
+    referrer,
+    country: geo?.country ?? null,
+    city: geo?.city ?? null,
+    region: geo?.region ?? null,
+  };
+
   // Try slug lookup first (with cache)
   try {
     const slugCacheKey = `slug:${code}`;
     const slugCached = await redisClient.get(slugCacheKey);
     if (slugCached) {
-      publishAnalyticsEvent(BigInt(slugCached.split("|")[0]), type).catch(
+      publishAnalyticsEvent(BigInt(slugCached.split("|")[0]), type, undefined, analyticsCtx).catch(
         () => {},
       );
       return NextResponse.redirect(slugCached.split("|")[1]);
@@ -46,7 +63,7 @@ export async function GET(
       .catch(() => {});
 
     // Fire-and-forget analytics
-    publishAnalyticsEvent(id, type).catch(() => {});
+    publishAnalyticsEvent(id, type, undefined, analyticsCtx).catch(() => {});
 
     return NextResponse.redirect(longUrl);
   }
@@ -63,7 +80,7 @@ export async function GET(
     );
   }
 
-  const trackPromise = publishAnalyticsEvent(databaseId, type);
+  const trackPromise = publishAnalyticsEvent(databaseId, type, undefined, analyticsCtx);
 
   try {
     const cached = await redisClient.get(CACHE_KEYS.url(code));

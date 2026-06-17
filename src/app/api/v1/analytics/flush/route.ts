@@ -23,6 +23,15 @@ export async function POST(_request: NextRequest) {
         urlId: BigInt(e.urlId),
         type: e.type,
         timestamp: new Date(e.timestamp),
+        ip: e.ip ?? null,
+        userAgent: e.userAgent ?? null,
+        referrer: e.referrer ?? null,
+        country: e.country ?? null,
+        city: e.city ?? null,
+        region: e.region ?? null,
+        browser: e.browser ?? null,
+        os: e.os ?? null,
+        device: e.device ?? null,
       }))
     );
 

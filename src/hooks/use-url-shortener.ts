@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import axios from "axios";
 import { API_PREFIX, STORAGE_KEYS } from "@/constants/app";
 import type { UrlData } from "@/types/common";
 
 export function useUrlShortener() {
   const [longUrl, setLongUrl] = useState("");
+  const [slug, setSlug] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [urls, setUrls] = useState<UrlData[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -38,7 +39,10 @@ export function useUrlShortener() {
     // We check via the state setter pattern below
     setIsLoading(true);
     try {
-      const res = await axios.post(`${API_PREFIX}/shorten`, { longUrl });
+      const res = await axios.post(`${API_PREFIX}/shorten`, {
+        longUrl,
+        ...(slug.trim() ? { slug: slug.trim() } : {}),
+      });
       const data = res.data;
       const newUrl: UrlData = {
         code: data.code,
@@ -48,6 +52,7 @@ export function useUrlShortener() {
       };
       setUrls((prev) => [newUrl, ...prev]);
       setLongUrl("");
+      setSlug("");
       toast.success("URL shortened successfully!");
     } catch (error: any) {
       const msg =
@@ -56,7 +61,7 @@ export function useUrlShortener() {
     } finally {
       setIsLoading(false);
     }
-  }, [longUrl]);
+  }, [longUrl, slug]);
 
   /* ─── Delete URL with optimistic removal ─── */
   const handleDelete = useCallback(
@@ -65,7 +70,7 @@ export function useUrlShortener() {
       setUrls((prev) => prev.filter((u) => u.code !== code));
       try {
         await axios.delete(`${API_PREFIX}/urls/${code}`);
-        toast.info("URL deleted.");
+        toast.deleted();
       } catch (error: any) {
         const msg =
           error.response?.data?.error || error.message || "Failed to delete";
@@ -79,16 +84,22 @@ export function useUrlShortener() {
   /* ─── Focus input field ─── */
   const focusInput = useCallback(() => {
     inputRef.current?.focus();
-    inputRef.current?.scrollIntoView({ behavior: "smooth" });
+    const top = inputRef.current?.getBoundingClientRect().top ?? 0;
+    window.scrollBy({
+      top: top - 100, // 100px offset for fixed header
+      behavior: "smooth",
+    });
   }, []);
 
   return {
     urls,
     longUrl,
+    slug,
     isLoading,
     mounted,
     inputRef,
     setLongUrl,
+    setSlug,
     handleSubmit,
     handleDelete,
     focusInput,

@@ -5,10 +5,10 @@ import {
   Link,
   Copy,
   Trash2,
-  BarChart3,
   QrCode,
   Check,
   ChevronRight,
+  LayoutDashboard,
 } from "lucide-react";
 
 import type { UrlData } from "@/types/common";
@@ -40,7 +40,7 @@ interface UrlListProps {
   urls: UrlData[];
   copiedCode: string | null;
   onCopy: (text: string, code: string) => void;
-  onAnalytics: (code: string) => void;
+  onDashboard: (code: string) => void;
   onQrCode: (url: string) => void;
   onDelete: (code: string) => void;
   onShortenAnother: () => void;
@@ -51,7 +51,7 @@ export function UrlList({
   urls,
   copiedCode,
   onCopy,
-  onAnalytics,
+  onDashboard,
   onQrCode,
   onDelete,
   onShortenAnother,
@@ -160,9 +160,9 @@ export function UrlList({
                             action: () => onCopy(url.shortUrl, url.code),
                           },
                           {
-                            icon: BarChart3,
-                            label: "Analytics",
-                            action: () => onAnalytics(url.code),
+                            icon: LayoutDashboard,
+                            label: "Dashboard",
+                            action: () => onDashboard(url.code),
                           },
                           {
                             icon: QrCode,

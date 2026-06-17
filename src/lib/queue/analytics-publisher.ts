@@ -15,20 +15,60 @@ function getClient(): Client | null {
 export async function publishAnalyticsEvent(
   urlId: bigint,
   type: "click" | "scan",
-  timestamp?: string
+  timestamp?: string,
+  context?: {
+    ip?: string | null;
+    userAgent?: string | null;
+    referrer?: string | null;
+    country?: string | null;
+    city?: string | null;
+    region?: string | null;
+  }
 ): Promise<void> {
   const ts = timestamp ?? new Date().toISOString();
   const client = getClient();
 
+  // Parse UA server-side if available
+  let browser: string | null = null;
+  let os: string | null = null;
+  let device: string | null = null;
+  if (context?.userAgent) {
+    try {
+      const uaModule = await import("ua-parser-js");
+      const UAParser = (uaModule.default ?? uaModule) as any;
+      const parser = new UAParser(context.userAgent);
+      browser = parser.getBrowser().name ?? null;
+      os = parser.getOS().name ?? null;
+      device = parser.getDevice().type ?? null;
+    } catch {
+      // silent
+    }
+  }
+
+  const event = {
+    urlId: Number(urlId),
+    type,
+    timestamp: ts,
+    ip: context?.ip ?? null,
+    userAgent: context?.userAgent ?? null,
+    referrer: context?.referrer ?? null,
+    country: context?.country ?? null,
+    city: context?.city ?? null,
+    region: context?.region ?? null,
+    browser,
+    os,
+    device,
+  };
+
   if (client) {
-    // Production: publish to QStash — redirect critical path stays fast
+    // Production: publish to QStash
     await client.publishJSON({
       url: `${process.env.NEXT_PUBLIC_URL}/api/v1/analytics/consume`,
-      body: { urlId: Number(urlId), type, timestamp: ts },
+      body: event,
     });
   } else {
     // Dev: process synchronously
-    await processEvent({ urlId: Number(urlId), type, timestamp: ts });
+    await processEvent(event);
   }
 }
 
@@ -37,6 +77,15 @@ export interface AnalyticsEvent {
   urlId: number;
   type: "click" | "scan";
   timestamp: string;
+  ip?: string | null;
+  userAgent?: string | null;
+  referrer?: string | null;
+  country?: string | null;
+  city?: string | null;
+  region?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  device?: string | null;
 }
 
 /* ─── Batch processor (used by both consumer and dev fallback) ─── */
@@ -47,6 +96,15 @@ export async function processEvent(event: AnalyticsEvent) {
       urlId: BigInt(event.urlId),
       type: event.type,
       timestamp: new Date(event.timestamp),
+      ip: event.ip ?? null,
+      userAgent: event.userAgent ?? null,
+      referrer: event.referrer ?? null,
+      country: event.country ?? null,
+      city: event.city ?? null,
+      region: event.region ?? null,
+      browser: event.browser ?? null,
+      os: event.os ?? null,
+      device: event.device ?? null,
     });
 
     // 2. Update counter
@@ -61,4 +119,3 @@ export async function processEvent(event: AnalyticsEvent) {
     throw e; // QStash will retry
   }
 }
-

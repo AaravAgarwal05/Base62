@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Link,
@@ -17,7 +18,6 @@ import { Footer } from "@/components/layout/footer";
 import { UrlInput } from "@/components/features/url-shortener/url-input";
 import { UrlList } from "@/components/features/url-shortener/url-list";
 import { QRCodeModal } from "@/components/features/qr-code/qr-code-modal";
-import { AnalyticsModal } from "@/components/features/analytics/analytics-modal";
 import { CircularLoader } from "@/components/layout/loader";
 import { useUrlShortener } from "@/hooks/use-url-shortener";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
@@ -72,19 +72,19 @@ const processSteps = [
 
 /* ─── Component ─── */
 export default function Home() {
+  const router = useRouter();
   const [appReady, setAppReady] = useState(false);
   const [activeQrUrl, setActiveQrUrl] = useState<string | null>(null);
-  const [activeAnalyticsCode, setActiveAnalyticsCode] = useState<string | null>(
-    null
-  );
 
   const {
     urls,
     longUrl,
+    slug,
     isLoading,
     mounted,
     inputRef,
     setLongUrl,
+    setSlug,
     handleSubmit,
     handleDelete,
     focusInput,
@@ -147,8 +147,10 @@ export default function Home() {
               <UrlInput
                 ref={inputRef}
                 longUrl={longUrl}
+                slug={slug}
                 isLoading={isLoading}
                 onChange={setLongUrl}
+                onSlugChange={setSlug}
                 onSubmit={handleSubmit}
               />
             </div>
@@ -350,7 +352,7 @@ export default function Home() {
             urls={urls}
             copiedCode={copiedCode}
             onCopy={copyToClipboard}
-            onAnalytics={(code) => setActiveAnalyticsCode(code)}
+            onDashboard={(code) => router.push(`/analytics/${code}`)}
             onQrCode={(url) => setActiveQrUrl(url)}
             onDelete={handleDelete}
             onShortenAnother={focusInput}
@@ -400,11 +402,6 @@ export default function Home() {
             isOpen={!!activeQrUrl}
             onClose={() => setActiveQrUrl(null)}
             url={activeQrUrl || ""}
-          />
-          <AnalyticsModal
-            isOpen={!!activeAnalyticsCode}
-            onClose={() => setActiveAnalyticsCode(null)}
-            code={activeAnalyticsCode || ""}
           />
         </motion.div>
       )}

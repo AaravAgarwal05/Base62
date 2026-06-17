@@ -7,6 +7,17 @@ export interface AnalyticsEvent {
   urlId: number;
   type: "click" | "scan";
   timestamp: string;
+
+  /* ─── Optional request context ─── */
+  ip?: string | null;
+  userAgent?: string | null;
+  referrer?: string | null;
+  country?: string | null;
+  city?: string | null;
+  region?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  device?: string | null;
 }
 
 /* ─── Buffer event in Redis ─── */
@@ -25,9 +36,7 @@ export async function peekBuffer(): Promise<AnalyticsEvent[]> {
     const raw = await redisClient.lRange(BUFFER_KEY, 0, -1);
     if (!raw || raw.length === 0) return [];
     // Reverse so oldest events come first
-    return raw
-      .reverse()
-      .map((s) => JSON.parse(s) as AnalyticsEvent);
+    return raw.reverse().map((s) => JSON.parse(s) as AnalyticsEvent);
   } catch (e) {
     console.error("[Analytics Buffer] Peek failed:", e);
     throw e;
